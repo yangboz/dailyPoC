@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日 AI 学习 TIPS</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .tips-container {
+            width: 400px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .tips-header {
+            background-color: #007bff;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 18px;
+        }
+        .tips-content {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            border-bottom: 1px solid #ddd;
+            position: relative;
+        }
+        .tips-content .tip {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .tips-content .tip.user {
+            background-color: #e3f2fd; /* 用户主动获取的 TIPS 样式 */
+        }
+        .tips-content .tip.auto {
+            background-color: #e8f5e9; /* 自动生成的 TIPS 样式 */
+        }
+        .tips-content .tip .timestamp {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+        .tips-content .tip .details {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .refresh-message {
+            text-align: center;
+            padding: 10px;
+            color: #888;
+            font-size: 14px;
+        }
+        .refresh-button {
+            text-align: center;
+            padding: 15px;
+            background-color: #f9f9f9;
+        }
+        .refresh-button button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .refresh-button button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="tips-container">
+        <div class="tips-header">
+            每日 AI 学习 TIPS
+        </div>
+        <div class="tips-content" id="tips-content">
+            <!-- TIPS 会动态添加到这里 -->
+            <div class="refresh-message">点击下方按钮获取 TIPS</div>
+        </div>
+        <div class="refresh-button">
+            <button onclick="fetchUserTip()">获取 TIPS</button>
+        </div>
+    </div>
+
+    <script>
+        // 获取 TIPS 的函数
+        async function fetchTip(type = 'auto') {
+            try {
+                const response = await fetch('http://127.0.0.1:5000/api/tips');
+                const data = await response.json();
+                return { ...data, type }; // 返回 TIPS 数据和类型
+            } catch (error) {
+                console.error('获取 TIPS 失败:', error);
+                return {
+                    tip: "暂无 TIPS，请稍后再试。",
+                    timestamp: new Date().toLocaleString(),
+                    generation_time: 0,
+                    token_usage: 0,
+                    cost: 0,
+                    type
+                };
+            }
+        }
+
+        // 添加 TIPS 到内容区域
+        function addTip(tipData) {
+            const tipsContent = document.getElementById('tips-content');
+            const { tip, timestamp, generation_time, token_usage, cost, type } = tipData;
+
+            // 创建 TIPS 元素
+            const tipElement = document.createElement('div');
+            tipElement.classList.add('tip', type); // 根据类型设置样式
+            tipElement.innerHTML = `
+                <div>${tip}</div>
+                <div class="timestamp">${timestamp}</div>
+                <div class="details">
+                    生成速度: ${generation_time} ms | Token 数量: ${token_usage} | 费用: ${cost} 元
+                </div>
+            `;
+
+            // 根据类型决定添加到顶部还是底部
+            if (type === 'auto') {
+                tipsContent.insertBefore(tipElement, tipsContent.firstChild); // 添加到顶部
+            } else {
+                tipsContent.appendChild(tipElement); // 添加到底部
+            }
+
+            // 移除默认提示
+            const refreshMessage = tipsContent.querySelector('.refresh-message');
+            if (refreshMessage) {
+                refreshMessage.remove();
+            }
+        }
+
+        // 用户主动获取 TIPS
+        async function fetchUserTip() {
+            const tipData = await fetchTip('user'); // 获取用户主动触发的 TIPS
+            addTip(tipData);
+        }
+
+        // 自动生成 TIPS（滚动到顶部时触发）
+        let isRefreshing = false;
+        const tipsContent = document.getElementById('tips-content');
+
+        tipsContent.addEventListener('scroll', () => {
+            if (tipsContent.scrollTop === 0 && !isRefreshing) {
+                isRefreshing = true;
+                fetchTip('auto').then(addTip); // 获取自动触发的 TIPS
+                setTimeout(() => {
+                    isRefreshing = false;
+                }, 1000); // 防止重复触发
+            }
+        });
+
+        // 初始化加载一条 TIPS
+        fetchUserTip();
+    </script>
+</body>
+</html>
