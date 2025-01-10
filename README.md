@@ -1,7 +1,7 @@
 # dailyPoC
 daily Proof of concept by coding with AI 每日AI原型验证
 
-20250109concept：
+## 20250109concept：dailyAItips
 
 1. 应用功能设计
 
@@ -32,9 +32,9 @@ AI 服务：DeepSeek API 或其他国内 AI 平台。
 
 以下是一个简单的 HTML5 前端页面，包含学习模块和AI TIPS 生成及接收。
 
-20250110concept：
-I'll help you refactor the calorie tracking system into a FastAPI application with proper API endpoints and structure.
+## 20250110concept：calorie tracking system
 
+[Meanwhile, Zach Yadegari is quietly crushing it. He’s the mind behind Cal AI, an app that tracks calories using a simple photo. No logging. No spreadsheets. Just take a picture, and boom — calories calculated.]
 
 
 ```python
