@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CalTracker - Smart Calorie Tracking</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <nav class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">CalTracker</h1>
+            <div class="flex space-x-4">
+                <button id="summaryBtn" class="px-4 py-2 rounded hover:bg-blue-700">Daily Summary</button>
+                <button id="historyBtn" class="px-4 py-2 rounded hover:bg-blue-700">Meal History</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-4">
+        <!-- Upload Section -->
+        <section id="uploadSection" class="mb-8">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-4">Track New Meal</h2>
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center" id="dropZone">
+                    <input type="file" id="fileInput" class="hidden" accept="image/*">
+                    <div class="space-y-4">
+                        <i class="fas fa-camera text-4xl text-gray-400"></i>
+                        <p class="text-gray-500">Drag and drop a food photo or click to upload</p>
+                        <button class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+                            Choose Photo
+                        </button>
+                    </div>
+                </div>
+                <div id="imagePreview" class="mt-4 hidden">
+                    <img id="preview" class="max-w-md mx-auto rounded-lg" alt="Food preview">
+                </div>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section id="resultsSection" class="hidden mb-8">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-4">Analysis Results</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="space-y-2">
+                        <h3 class="font-medium">Detected Foods:</h3>
+                        <ul id="detectedFoods" class="list-disc list-inside text-gray-600">
+                        </ul>
+                    </div>
+                    <div class="space-y-2">
+                        <h3 class="font-medium">Total Calories:</h3>
+                        <p id="totalCalories" class="text-3xl font-bold text-blue-600"></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Daily Summary Section -->
+        <section id="summarySection" class="hidden mb-8">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-4">Daily Summary</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="text-center">
+                        <h3 class="text-gray-500">Total Calories</h3>
+                        <p id="dailyCalories" class="text-3xl font-bold text-blue-600">0</p>
+                    </div>
+                    <div class="text-center">
+                        <h3 class="text-gray-500">Meals Today</h3>
+                        <p id="mealCount" class="text-3xl font-bold text-blue-600">0</p>
+                    </div>
+                    <div class="text-center">
+                        <h3 class="text-gray-500">Foods Eaten</h3>
+                        <p id="foodCount" class="text-3xl font-bold text-blue-600">0</p>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <h3 class="font-medium mb-2">Foods Eaten Today:</h3>
+                    <ul id="foodsList" class="list-disc list-inside text-gray-600">
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- History Section -->
+        <section id="historySection" class="hidden">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-4">Meal History</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full table-auto">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="px-4 py-2">Date</th>
+                                <th class="px-4 py-2">Foods</th>
+                                <th class="px-4 py-2">Calories</th>
+                                <th class="px-4 py-2">Image</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTable">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+
+        // DOM Elements
+        const fileInput = document.getElementById('fileInput');
+        const dropZone = document.getElementById('dropZone');
+        const imagePreview = document.getElementById('imagePreview');
+        const preview = document.getElementById('preview');
+        const resultsSection = document.getElementById('resultsSection');
+        const detectedFoods = document.getElementById('detectedFoods');
+        const totalCalories = document.getElementById('totalCalories');
+        const summarySection = document.getElementById('summarySection');
+        const historySection = document.getElementById('historySection');
+        const summaryBtn = document.getElementById('summaryBtn');
+        const historyBtn = document.getElementById('historyBtn');
+
+        // Event Listeners
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-blue-500');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-blue-500');
+        });
+        dropZone.addEventListener('drop', handleDrop);
+        fileInput.addEventListener('change', handleFileSelect);
+        summaryBtn.addEventListener('click', showDailySummary);
+        historyBtn.addEventListener('click', showHistory);
+
+        // File Handling
+        function handleDrop(e) {
+            e.preventDefault();
+            dropZone.classList.remove('border-blue-500');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                handleFile(file);
+            }
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                preview.src = e.target.result;
+                imagePreview.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+
+            // Upload to API
+            uploadImage(file);
+        }
+
+        // API Interactions
+        async function uploadImage(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${API_URL}/meals/`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                showResults(data);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to upload image. Please try again.');
+            }
+        }
+
+        async function getDailySummary() {
+            try {
+                const response = await fetch(`${API_URL}/summary/daily/`);
+                const data = await response.json();
+                updateSummary(data);
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function getMealHistory() {
+            try {
+                const response = await fetch(`${API_URL}/meals/`);
+                const data = await response.json();
+                updateHistory(data);
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // UI Updates
+        function showResults(data) {
+            resultsSection.classList.remove('hidden');
+            detectedFoods.innerHTML = data.items.map(food => 
+                `<li class="capitalize">${food}</li>`
+            ).join('');
+            totalCalories.textContent = `${data.calories} kcal`;
+        }
+
+        function updateSummary(data) {
+            document.getElementById('dailyCalories').textContent = data.total_calories;
+            document.getElementById('mealCount').textContent = data.meal_count;
+            document.getElementById('foodCount').textContent = data.foods_eaten.length;
+            document.getElementById('foodsList').innerHTML = data.foods_eaten.map(food =>
+                `<li class="capitalize">${food}</li>`
+            ).join('');
+        }
+
+        function updateHistory(data) {
+            const historyTable = document.getElementById('historyTable');
+            historyTable.innerHTML = data.map(meal => `
+                <tr class="border-b">
+                    <td class="px-4 py-2">${new Date(meal.timestamp).toLocaleString()}</td>
+                    <td class="px-4 py-2">${meal.items.join(', ')}</td>
+                    <td class="px-4 py-2">${meal.calories} kcal</td>
+                    <td class="px-4 py-2">
+                        <img src="${meal.image_path}" class="w-16 h-16 object-cover rounded">
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showDailySummary() {
+            summarySection.classList.remove('hidden');
+            historySection.classList.add('hidden');
+            getDailySummary();
+        }
+
+        function showHistory() {
+            historySection.classList.remove('hidden');
+            summarySection.classList.add('hidden');
+            getMealHistory();
+        }
+
+        // Initial load
+        getDailySummary();
+    </script>
+</body>
+</html>
