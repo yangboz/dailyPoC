@@ -78,5 +78,8 @@ graph TD
 3. 设置人工监督机制，特别是在关键决策点
 4. 逐步迭代，从简单任务开始，循序渐进扩展能力
 
-您觉得这个分析是否符合您的预期？我们可以深入讨论任何特定方面。
+## references
+
+https://github.com/yangboz/crewAI-examples/tree/main/game-builder-crew
+
 
